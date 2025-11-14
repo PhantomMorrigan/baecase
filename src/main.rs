@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::prelude::*;
 use bevy_bae::prelude::*;
 
@@ -28,15 +30,31 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             Operator::new(collect_berry)
         ),
     ));
+    commands.spawn((
+        Plan::new(),
+        Sprite::from_image(asset_server.load("collector.png")),
+        Sequence,
+        tasks!(
+            Operator::new(find_closest_berry),
+            Operator::new(go_to_berry),
+            Operator::new(collect_berry)
+        ),
+        Transform::from_translation(Vec3::splat(100.0)),
+    ));
 }
 
 #[derive(Component)]
+#[relationship(relationship_target = TargetedBerry)]
 pub struct TargetBerry(pub Entity);
+
+#[derive(Component)]
+#[relationship_target(relationship = TargetBerry)]
+pub struct TargetedBerry(Entity);
 
 fn find_closest_berry(
     In(input): In<OperatorInput>,
     mut commands: Commands,
-    berries: Query<(Entity, &Transform), With<Berry>>,
+    berries: Query<(Entity, &Transform), (With<Berry>, Without<TargetedBerry>)>,
     planner: Query<&Transform, With<Plan>>,
 ) -> OperatorStatus {
     let pos = planner.get(input.entity).unwrap().translation.xy();
@@ -60,7 +78,7 @@ fn find_closest_berry(
 fn go_to_berry(
     In(input): In<OperatorInput>,
     mut planners: Query<(&mut Transform, &TargetBerry), With<Plan>>,
-    berries: Query<&Transform, (With<Berry>, Without<Plan>)>,
+    berries: Query<&Transform, (With<TargetedBerry>, Without<Plan>)>,
     time: Res<Time>,
 ) -> OperatorStatus {
     let (mut trans, target_entity) = planners.get_mut(input.entity).unwrap();
