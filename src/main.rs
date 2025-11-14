@@ -30,6 +30,16 @@ fn main() {
         .add_systems(Startup, setup)
         .add_message::<NewBerry>()
         .add_systems(Update, berries::spawn_berries)
+        .add_observer(
+            |trigger: On<Add, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
+                sprite.get_mut(trigger.entity).unwrap().color = Color::linear_rgb(2.0, 1.0, 0.8);
+            },
+        )
+        .add_observer(
+            |trigger: On<Remove, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
+                sprite.get_mut(trigger.entity).unwrap().color = Color::WHITE;
+            },
+        )
         .run();
 }
 

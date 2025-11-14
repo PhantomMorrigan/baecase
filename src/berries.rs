@@ -16,7 +16,7 @@ pub fn spawn_berries(
     asset_server: Res<AssetServer>,
     mut new_berries: MessageWriter<NewBerry>,
 ) {
-    timer.set_duration(Duration::from_millis(50));
+    timer.set_duration(Duration::from_millis(1));
     timer.tick(time.delta());
     if timer.is_finished() {
         let new = commands
