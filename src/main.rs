@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_bae::prelude::*;
 
-use crate::berries::Berry;
+use crate::berries::{Berry, NewBerry};
 
 mod berries;
 
@@ -13,6 +13,7 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, BaePlugin::default()))
         .add_systems(Startup, setup)
+        .add_message::<NewBerry>()
         .add_systems(Update, berries::spawn_berries)
         .run();
 }
@@ -44,17 +45,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 #[derive(Component)]
-#[relationship(relationship_target = TargetedBerry)]
 pub struct TargetBerry(pub Entity);
-
-#[derive(Component)]
-#[relationship_target(relationship = TargetBerry)]
-pub struct TargetedBerry(Entity);
 
 fn find_closest_berry(
     In(input): In<OperatorInput>,
     mut commands: Commands,
-    berries: Query<(Entity, &Transform), (With<Berry>, Without<TargetedBerry>)>,
+    berries: Query<(Entity, &Transform), With<Berry>>,
     planner: Query<&Transform, With<Plan>>,
 ) -> OperatorStatus {
     let pos = planner.get(input.entity).unwrap().translation.xy();
@@ -78,11 +74,33 @@ fn find_closest_berry(
 fn go_to_berry(
     In(input): In<OperatorInput>,
     mut planners: Query<(&mut Transform, &TargetBerry), With<Plan>>,
-    berries: Query<&Transform, (With<TargetedBerry>, Without<Plan>)>,
+    berries: Query<&Transform, (With<Berry>, Without<Plan>)>,
     time: Res<Time>,
+    mut news: MessageReader<NewBerry>,
+    mut commands: Commands,
 ) -> OperatorStatus {
-    let (mut trans, target_entity) = planners.get_mut(input.entity).unwrap();
+    let Ok((mut trans, target_entity)) = planners.get_mut(input.entity) else {
+        return OperatorStatus::Failure;
+    };
+
     if let Ok(target) = berries.get(target_entity.0) {
+        for new in news.read() {
+            let new_trans = berries.get(new.0).unwrap();
+
+            if new_trans
+                .translation
+                .xy()
+                .distance_squared(trans.translation.xy())
+                < target
+                    .translation
+                    .xy()
+                    .distance_squared(trans.translation.xy())
+            {
+                commands.entity(input.entity).insert(TargetBerry(new.0));
+                return OperatorStatus::Ongoing;
+            }
+        }
+
         let dir = (target.translation.xy() - trans.translation.xy()).normalize();
         let mov = dir * SPEED * time.delta_secs();
         if (target.translation.xy() - (trans.translation.xy() + mov)).length() < mov.length() {
