@@ -16,19 +16,21 @@ pub fn spawn_berries(
     asset_server: Res<AssetServer>,
     mut new_berries: MessageWriter<NewBerry>,
 ) {
-    timer.set_duration(Duration::from_secs(1));
+    timer.set_duration(Duration::from_millis(10));
     timer.tick(time.delta());
     if timer.is_finished() {
-        let new = commands
-            .spawn((
-                Berry,
-                Transform::from_translation(
-                    (rand::rng().random::<Vec2>() - Vec2::splat(0.5)).extend(0.0) * 1000.0,
-                ),
-                Sprite::from_image(asset_server.load("berry.png")),
-            ))
-            .id();
-        new_berries.write(NewBerry(new));
-        timer.reset();
+        for _ in 0..100 {
+            let new = commands
+                .spawn((
+                    Berry,
+                    Transform::from_translation(
+                        (rand::rng().random::<Vec2>() - Vec2::splat(0.5)).extend(0.0) * 1000.0,
+                    ),
+                    Sprite::from_image(asset_server.load("berry.png")),
+                ))
+                .id();
+            new_berries.write(NewBerry(new));
+            timer.reset();
+        }
     }
 }
