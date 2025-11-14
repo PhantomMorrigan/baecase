@@ -36,7 +36,7 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     let mut rng = rand::rng();
-    for _ in 1..2500 {
+    for _ in 1..100 {
         commands.spawn((
             Plan::new(),
             Sprite::from_image(asset_server.load("collector.png")),
@@ -85,22 +85,11 @@ fn find_closest_berry(
     OperatorStatus::Ongoing
 }
 
-fn first_berry(
-    In(input): In<OperatorInput>,
-    berries: Query<Entity, (With<Berry>, Without<TargetedBerry>)>,
-    mut commands: Commands,
-) -> OperatorStatus {
-    if let Some(berry) = berries.iter().next() {
-        commands.entity(input.entity).insert(TargetBerry(berry));
-        return OperatorStatus::Success;
-    }
-    OperatorStatus::Ongoing
-}
-
 fn go_to_berry(
     In(input): In<OperatorInput>,
     mut planners: Query<(&mut Transform, &TargetBerry), With<Plan>>,
     berries: Query<&Transform, (With<Berry>, Without<Plan>)>,
+    new_berries: Query<&Transform, (With<Berry>, Without<TargetedBerry>, Without<Plan>)>,
     time: Res<Time>,
     mut news: MessageReader<NewBerry>,
     mut commands: Commands,
@@ -111,7 +100,7 @@ fn go_to_berry(
 
     if let Ok(target) = berries.get(target_entity.0) {
         for new in news.read() {
-            let Ok(new_trans) = berries.get(new.0) else {
+            let Ok(new_trans) = new_berries.get(new.0) else {
                 continue;
             };
 
