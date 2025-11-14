@@ -45,12 +45,17 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 #[derive(Component)]
+#[relationship(relationship_target = TargetedBerry)]
 pub struct TargetBerry(pub Entity);
+
+#[derive(Component)]
+#[relationship_target(relationship = TargetBerry)]
+pub struct TargetedBerry(Entity);
 
 fn find_closest_berry(
     In(input): In<OperatorInput>,
     mut commands: Commands,
-    berries: Query<(Entity, &Transform), With<Berry>>,
+    berries: Query<(Entity, &Transform), (With<Berry>, Without<TargetedBerry>, Without<Plan>)>,
     planner: Query<&Transform, With<Plan>>,
 ) -> OperatorStatus {
     let pos = planner.get(input.entity).unwrap().translation.xy();
