@@ -57,19 +57,16 @@ pub fn update_leaderboard(
     board: Single<&Children, With<LeaderBoard>>,
     mut lowest: Single<&mut Text, With<Lowest>>,
     mut texts: Query<&mut Text, Without<Lowest>>,
-    ghosts: Query<(Entity, &BerriesEaten)>,
+    ghosts: Query<(&Name, &BerriesEaten)>,
 ) {
     ghosts
         .iter()
-        .sort_by_key::<(Entity, &BerriesEaten), usize>(|(_, e)| e.0)
+        .sort_by_key::<(&Name, &BerriesEaten), usize>(|(_, e)| e.0)
         .rev()
         .zip(board.iter())
         .for_each(|((ghost, eaten), text)| {
-            texts.get_mut(text).unwrap().0 = format!(
-                "Ghost {:>5} has eaten {} berries!",
-                ghost.to_string(),
-                eaten.0
-            );
+            texts.get_mut(text).unwrap().0 =
+                format!("{:<10} ate {} berries!", ghost.to_string(), eaten.0);
         });
 
     let low = ghosts
@@ -78,9 +75,5 @@ pub fn update_leaderboard(
         .next()
         .unwrap();
 
-    lowest.0 = format!(
-        "Ghost {:>5} has eaten {} berries!",
-        low.0.to_string(),
-        low.1.0
-    );
+    lowest.0 = format!("{:<10} ate {} berries!", low.0.to_string(), low.1.0);
 }

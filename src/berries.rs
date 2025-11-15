@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use rand::Rng;
+
+use crate::sample_arena;
 
 #[derive(Component)]
 pub struct Berry;
@@ -16,9 +17,7 @@ pub fn spawn_berries(
         let new = commands
             .spawn((
                 Berry,
-                Transform::from_translation(
-                    (rand::rng().random::<Vec2>() - Vec2::splat(0.5)).extend(0.0) * 1000.0,
-                ),
+                Transform::from_translation(sample_arena(&mut rand::rng()).extend(0.0)),
                 Sprite::from_image(asset_server.load("berry.png")),
             ))
             .id();

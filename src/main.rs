@@ -1,10 +1,14 @@
 #![allow(clippy::type_complexity)]
 
+use std::f32::consts::TAU;
+
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    image::ImageSamplerDescriptor,
     prelude::*,
 };
 use bevy_bae::prelude::*;
+use fake::{Fake, locales::EN};
 use rand::Rng;
 
 use crate::berries::{Berry, NewBerry};
@@ -13,11 +17,19 @@ mod berries;
 mod leaderbord;
 
 const SPEED: f32 = 100.0;
+const RANGE: f32 = 450.0;
+
+pub fn sample_arena(rng: &mut impl Rng) -> Vec2 {
+    let r: f32 = rng.random::<f32>() * TAU;
+    Vec2::new(r.sin(), r.cos()) * (rng.random::<f32>() * RANGE)
+}
 
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.build().set(ImagePlugin {
+                default_sampler: ImageSamplerDescriptor::nearest(),
+            }),
             BaePlugin::default(),
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
@@ -44,10 +56,17 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     let mut rng = rand::rng();
+
+    commands.spawn((
+        Sprite::from_image(asset_server.load("arena.png")),
+        Transform::from_scale(Vec2::splat(18.0).extend(0.0)),
+    ));
+
     for _ in 1..100 {
         commands.spawn((
             Plan::new(),
             BerriesEaten(0),
+            Name::new(fake::faker::name::raw::FirstName(EN).fake::<String>()),
             Sprite::from_image(asset_server.load("collector.png")),
             Sequence,
             tasks!(
@@ -55,9 +74,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 Operator::new(go_to_berry),
                 Operator::new(collect_berry)
             ),
-            Transform::from_translation(
-                ((rng.random::<Vec2>() - Vec2::splat(0.5)) * 1000.0).extend(0.1),
-            ),
+            Transform::from_translation(sample_arena(&mut rng).extend(0.1)),
         ));
     }
 }
