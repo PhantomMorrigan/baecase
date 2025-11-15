@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -11,14 +9,10 @@ pub struct NewBerry(pub Entity);
 
 pub fn spawn_berries(
     mut commands: Commands,
-    mut timer: Local<Timer>,
-    time: Res<Time>,
     asset_server: Res<AssetServer>,
     mut new_berries: MessageWriter<NewBerry>,
 ) {
-    timer.set_duration(Duration::from_millis(1));
-    timer.tick(time.delta());
-    if timer.is_finished() {
+    for _ in 0..5 {
         let new = commands
             .spawn((
                 Berry,
@@ -29,6 +23,5 @@ pub fn spawn_berries(
             ))
             .id();
         new_berries.write(NewBerry(new));
-        timer.reset();
     }
 }

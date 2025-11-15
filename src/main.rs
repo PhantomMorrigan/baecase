@@ -16,13 +16,7 @@ const SPEED: f32 = 100.0;
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.build().set(WindowPlugin {
-                primary_window: Some(Window {
-                    present_mode: bevy::window::PresentMode::AutoNoVsync,
-                    ..default()
-                }),
-                ..default()
-            }),
+            DefaultPlugins,
             BaePlugin::default(),
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
@@ -49,6 +43,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for _ in 1..100 {
         commands.spawn((
             Plan::new(),
+            BerriesEaten(0),
             Sprite::from_image(asset_server.load("collector.png")),
             Sequence,
             tasks!(
@@ -70,6 +65,9 @@ pub struct TargetBerry(pub Entity);
 #[derive(Component)]
 #[relationship_target(relationship = TargetBerry)]
 pub struct TargetedBerry(Entity);
+
+#[derive(Component)]
+pub struct BerriesEaten(pub usize);
 
 fn find_closest_berry(
     In(input): In<OperatorInput>,
@@ -97,14 +95,14 @@ fn find_closest_berry(
 
 fn go_to_berry(
     In(input): In<OperatorInput>,
-    mut planners: Query<(&mut Transform, &TargetBerry), With<Plan>>,
+    mut planners: Query<(&mut Transform, &TargetBerry, &BerriesEaten), With<Plan>>,
     berries: Query<&Transform, (With<Berry>, Without<Plan>)>,
     new_berries: Query<&Transform, (With<Berry>, Without<TargetedBerry>, Without<Plan>)>,
     time: Res<Time>,
     mut news: MessageReader<NewBerry>,
     mut commands: Commands,
 ) -> OperatorStatus {
-    let Ok((mut trans, target_entity)) = planners.get_mut(input.entity) else {
+    let Ok((mut trans, target_entity, eaten)) = planners.get_mut(input.entity) else {
         return OperatorStatus::Failure;
     };
 
@@ -130,7 +128,7 @@ fn go_to_berry(
         }
 
         let dir = (target.translation.xy() - trans.translation.xy()).normalize();
-        let mov = dir * SPEED * time.delta_secs();
+        let mov = dir * (SPEED * (1.0 + (eaten.0 as f32 + 1.0).log10())) * time.delta_secs();
         if (target.translation.xy() - (trans.translation.xy() + mov)).length() < mov.length() {
             trans.translation = target.translation;
             return OperatorStatus::Success;
@@ -144,12 +142,13 @@ fn go_to_berry(
 
 fn collect_berry(
     In(input): In<OperatorInput>,
-    planners: Query<&TargetBerry, With<Plan>>,
+    mut planners: Query<(&TargetBerry, &mut BerriesEaten), With<Plan>>,
     mut commands: Commands,
 ) -> OperatorStatus {
-    let Ok(berry) = planners.get(input.entity) else {
+    let Ok((berry, mut eaten)) = planners.get_mut(input.entity) else {
         return OperatorStatus::Failure;
     };
+    eaten.0 += 1;
     commands.entity(berry.0).despawn();
     commands.entity(input.entity).remove::<TargetBerry>();
     OperatorStatus::Success
