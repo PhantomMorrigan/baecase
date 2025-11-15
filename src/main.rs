@@ -10,10 +10,7 @@ use bevy::{
 use bevy_bae::prelude::*;
 use rand::Rng;
 
-use crate::{
-    berries::NewBerry,
-    ghost::{TargetedBerry, ghost_plugin},
-};
+use crate::{berries::berry_plugin, ghost::ghost_plugin};
 
 mod berries;
 mod ghost;
@@ -36,22 +33,9 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             ghost_plugin,
+            berry_plugin,
         ))
         .add_systems(Startup, leaderbord::setup.after(ghost::setup))
-        .add_message::<NewBerry>()
-        .add_systems(
-            FixedUpdate,
-            (berries::spawn_berries, leaderbord::update_leaderboard),
-        )
-        .add_observer(
-            |trigger: On<Add, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
-                sprite.get_mut(trigger.entity).unwrap().color = Color::linear_rgb(2.0, 1.0, 0.8);
-            },
-        )
-        .add_observer(
-            |trigger: On<Remove, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
-                sprite.get_mut(trigger.entity).unwrap().color = Color::WHITE;
-            },
-        )
+        .add_systems(FixedUpdate, leaderbord::update_leaderboard)
         .run();
 }

@@ -1,6 +1,21 @@
 use bevy::prelude::*;
 
-use crate::sample_arena;
+use crate::{ghost::TargetedBerry, sample_arena};
+
+pub fn berry_plugin(app: &mut App) {
+    app.add_systems(FixedUpdate, spawn_berries)
+        .add_message::<NewBerry>()
+        .add_observer(
+            |trigger: On<Add, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
+                sprite.get_mut(trigger.entity).unwrap().color = Color::linear_rgb(2.0, 1.0, 0.8);
+            },
+        )
+        .add_observer(
+            |trigger: On<Remove, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
+                sprite.get_mut(trigger.entity).unwrap().color = Color::WHITE;
+            },
+        );
+}
 
 #[derive(Component)]
 pub struct Berry;
