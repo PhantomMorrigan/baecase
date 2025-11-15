@@ -2,6 +2,11 @@ use bevy::prelude::*;
 
 use crate::ghost::BerriesEaten;
 
+pub fn leaderboard_plugin(app: &mut App) {
+    app.add_systems(Startup, setup.after(crate::ghost::setup))
+        .add_systems(FixedPostUpdate, update_leaderboard);
+}
+
 #[derive(Component)]
 pub struct LeaderBoard;
 

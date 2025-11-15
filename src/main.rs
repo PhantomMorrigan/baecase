@@ -10,7 +10,7 @@ use bevy::{
 use bevy_bae::prelude::*;
 use rand::Rng;
 
-use crate::{berries::berry_plugin, ghost::ghost_plugin};
+use crate::{berries::berry_plugin, ghost::ghost_plugin, leaderbord::leaderboard_plugin};
 
 mod berries;
 mod ghost;
@@ -34,8 +34,7 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             ghost_plugin,
             berry_plugin,
+            leaderboard_plugin,
         ))
-        .add_systems(Startup, leaderbord::setup.after(ghost::setup))
-        .add_systems(FixedUpdate, leaderbord::update_leaderboard)
         .run();
 }
