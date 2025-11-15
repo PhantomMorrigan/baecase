@@ -13,6 +13,9 @@ pub fn ghost_plugin(app: &mut App) {
     app.add_systems(Startup, setup);
 }
 
+#[derive(Component)]
+pub struct Ghost;
+
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     let mut rng = rand::rng();
@@ -25,6 +28,7 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for _ in 1..100 {
         commands.spawn((
             Plan::new(),
+            Ghost,
             BerriesEaten(0),
             Name::new(fake::faker::name::raw::FirstName(EN).fake::<String>()),
             Sprite::from_image(asset_server.load("ghost.png")),
@@ -53,10 +57,10 @@ pub struct BerriesEaten(pub usize);
 fn find_closest_berry(
     In(input): In<OperatorInput>,
     mut commands: Commands,
-    berries: Query<(Entity, &Transform), (With<Berry>, Without<TargetedBerry>, Without<Plan>)>,
-    planner: Query<&Transform, With<Plan>>,
+    berries: Query<(Entity, &Transform), (With<Berry>, Without<TargetedBerry>)>,
+    ghosts: Query<&Transform, With<Ghost>>,
 ) -> OperatorStatus {
-    let pos = planner.get(input.entity).unwrap().translation.xy();
+    let pos = ghosts.get(input.entity).unwrap().translation.xy();
     let mut closest: Option<Entity> = None;
     let mut closest_dist = 0.0;
     for (entity, transform) in berries {
@@ -76,14 +80,14 @@ fn find_closest_berry(
 
 fn go_to_berry(
     In(input): In<OperatorInput>,
-    mut planners: Query<(&mut Transform, &TargetBerry, &BerriesEaten), With<Plan>>,
-    berries: Query<&Transform, (With<Berry>, Without<Plan>)>,
-    new_berries: Query<&Transform, (With<Berry>, Without<TargetedBerry>, Without<Plan>)>,
+    mut ghosts: Query<(&mut Transform, &TargetBerry, &BerriesEaten), With<Ghost>>,
+    berries: Query<&Transform, (With<Berry>, Without<Ghost>)>,
+    new_berries: Query<&Transform, (With<Berry>, Without<TargetedBerry>, Without<Ghost>)>,
     time: Res<Time>,
     mut news: MessageReader<NewBerry>,
     mut commands: Commands,
 ) -> OperatorStatus {
-    let Ok((mut trans, target_entity, eaten)) = planners.get_mut(input.entity) else {
+    let Ok((mut trans, target_entity, eaten)) = ghosts.get_mut(input.entity) else {
         return OperatorStatus::Failure;
     };
 
@@ -123,10 +127,10 @@ fn go_to_berry(
 
 fn collect_berry(
     In(input): In<OperatorInput>,
-    mut planners: Query<(&TargetBerry, &mut BerriesEaten), With<Plan>>,
+    mut ghosts: Query<(&TargetBerry, &mut BerriesEaten), With<Ghost>>,
     mut commands: Commands,
 ) -> OperatorStatus {
-    let Ok((berry, mut eaten)) = planners.get_mut(input.entity) else {
+    let Ok((berry, mut eaten)) = ghosts.get_mut(input.entity) else {
         return OperatorStatus::Failure;
     };
     eaten.0 += 1;
