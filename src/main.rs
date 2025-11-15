@@ -10,6 +10,7 @@ use rand::Rng;
 use crate::berries::{Berry, NewBerry};
 
 mod berries;
+mod leaderbord;
 
 const SPEED: f32 = 100.0;
 
@@ -21,9 +22,12 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
         ))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, leaderbord::setup).chain())
         .add_message::<NewBerry>()
-        .add_systems(Update, berries::spawn_berries)
+        .add_systems(
+            FixedUpdate,
+            (berries::spawn_berries, leaderbord::update_leaderboard),
+        )
         .add_observer(
             |trigger: On<Add, TargetedBerry>, mut sprite: Query<&mut Sprite>| {
                 sprite.get_mut(trigger.entity).unwrap().color = Color::linear_rgb(2.0, 1.0, 0.8);
