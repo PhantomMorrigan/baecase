@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::BerriesEaten;
+use crate::ghost::BerriesEaten;
 
 #[derive(Component)]
 pub struct LeaderBoard;
