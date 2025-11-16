@@ -86,55 +86,50 @@ fn go_to_berry(
     time: Res<Time>,
     mut news: MessageReader<NewBerry>,
     mut commands: Commands,
-) -> OperatorStatus {
-    let Ok((mut trans, target_entity, eaten)) = ghosts.get_mut(input.entity) else {
-        return OperatorStatus::Failure;
-    };
+) -> Result<OperatorStatus> {
+    let (mut trans, target_entity, eaten) = ghosts.get_mut(input.entity)?;
 
-    if let Ok(target) = berries.get(target_entity.0) {
-        for new in news.read() {
-            let Ok(new_trans) = new_berries.get(new.0) else {
-                continue;
-            };
+    let target = berries.get(target_entity.0)?;
 
-            if (new_trans
+    for new in news.read() {
+        let Ok(new_trans) = new_berries.get(new.0) else {
+            continue;
+        };
+
+        if (new_trans
+            .translation
+            .xy()
+            .distance_squared(trans.translation.xy())
+            - target
                 .translation
                 .xy()
-                .distance_squared(trans.translation.xy())
-                - target
-                    .translation
-                    .xy()
-                    .distance_squared(trans.translation.xy()))
-                < 30.0
-            {
-                commands.entity(input.entity).insert(TargetBerry(new.0));
-                return OperatorStatus::Ongoing;
-            }
+                .distance_squared(trans.translation.xy()))
+            < 30.0
+        {
+            commands.entity(input.entity).insert(TargetBerry(new.0));
+            return Ok(OperatorStatus::Ongoing);
         }
-
-        let dir = (target.translation.xy() - trans.translation.xy()).normalize();
-        let mov = dir * (SPEED * (1.0 + (eaten.0 as f32 + 1.0).log10())) * time.delta_secs();
-        if (target.translation.xy() - (trans.translation.xy() + mov)).length() < mov.length() {
-            trans.translation = target.translation;
-            return OperatorStatus::Success;
-        }
-        trans.translation += mov.extend(0.0);
-    } else {
-        return OperatorStatus::Failure;
     }
-    OperatorStatus::Ongoing
+
+    let dir = (target.translation.xy() - trans.translation.xy()).normalize();
+    let mov = dir * (SPEED * (1.0 + (eaten.0 as f32 + 1.0).log10())) * time.delta_secs();
+    if (target.translation.xy() - (trans.translation.xy() + mov)).length() < mov.length() {
+        trans.translation = target.translation;
+        return Ok(OperatorStatus::Success);
+    }
+    trans.translation += mov.extend(0.0);
+
+    Ok(OperatorStatus::Ongoing)
 }
 
 fn collect_berry(
     In(input): In<OperatorInput>,
     mut ghosts: Query<(&TargetBerry, &mut BerriesEaten), With<Ghost>>,
     mut commands: Commands,
-) -> OperatorStatus {
-    let Ok((berry, mut eaten)) = ghosts.get_mut(input.entity) else {
-        return OperatorStatus::Failure;
-    };
+) -> Result<OperatorStatus> {
+    let (berry, mut eaten) = ghosts.get_mut(input.entity)?;
     eaten.0 += 1;
     commands.entity(berry.0).despawn();
     commands.entity(input.entity).remove::<TargetBerry>();
-    OperatorStatus::Success
+    Ok(OperatorStatus::Success)
 }
